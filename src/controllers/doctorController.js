@@ -26,6 +26,18 @@ let getAllDoctors = async (req, res) => {
     });
   }
 };
+let getAllDoctorsIncludeImage = async (req, res) => {
+  try {
+    let doctors = await doctorService.getAllDoctorsIncludeImage();
+    return res.status(200).json(doctors);
+  } catch (e) {
+    return res.status(200).json({
+      errCode: -1,
+      errMessage: "Error from server...",
+    });
+  }
+};
+
 let postInforDoctor = async (req, res) => {
   try {
     let response = await doctorService.saveDetailInforDoctor(req.body);
@@ -132,6 +144,19 @@ let sendRemedy = async (req, res) => {
     });
   }
 };
+let cancelRemedy = async (req, res) => {
+  try {
+    let response = await doctorService.cancelRemedy(req.body);
+    return res.status(200).json(response);
+  } catch (e) {
+    console.log(e);
+    return res.status(200).json({
+      errCode: -1,
+      errMessage: "Error from server...",
+    });
+  }
+};
+
 module.exports = {
   getTopDoctorHome,
   getAllDoctors,
@@ -143,4 +168,6 @@ module.exports = {
   getProfileDoctorById,
   getListPatientForDoctor,
   sendRemedy,
+  getAllDoctorsIncludeImage,
+  cancelRemedy,
 };

@@ -3,12 +3,15 @@ import _ from "lodash";
 import emailService from "./emailService";
 require("dotenv").config();
 import { v4 as uuidv4 } from "uuid";
+const { Op } = require("sequelize");
+
 let buildUrlEmail = (doctorId, token) => {
   let result = "";
   result = `${process.env.URL_REACT}/verify-booking?token=${token}&doctorId=${doctorId}`;
   return result;
 };
 let postBookAppointment = (data) => {
+  console.log(data);
   return new Promise(async (resolve, reject) => {
     try {
       if (
@@ -18,22 +21,14 @@ let postBookAppointment = (data) => {
         !data.date ||
         !data.fullName ||
         !data.selectedGender ||
-        !data.address
+        !data.address ||
+        !data.phoneNumber
       ) {
         resolve({
           errCode: 1,
           errMessage: "Missing required parameter",
         });
       } else {
-        let token = uuidv4();
-        await emailService.sendSimpleEmail({
-          reciverEmail: data.email,
-          patientName: data.fullName,
-          time: data.timeString,
-          doctorName: data.doctorName,
-          language: data.language,
-          redirectLink: buildUrlEmail(data.doctorId, token),
-        });
         // Update patient
         let user = await db.User.findOrCreate({
           where: { email: data.email },
@@ -48,23 +43,49 @@ let postBookAppointment = (data) => {
 
         // Create a booking record
         console.log("check user: ", user[0]);
+
         if (user && user[0]) {
-          await db.Booking.findOrCreate({
-            where: { patientId: user[0].id },
-            defaults: {
-              statusId: "S1",
-              doctorId: data.doctorId,
+          let token = uuidv4();
+          let booking = await db.Booking.findOne({
+            where: {
               patientId: user[0].id,
-              date: data.date,
-              timeType: data.timeType,
-              token: token,
+              [Op.or]: [{ statusId: "S1" }, { statusId: "S2" }],
             },
           });
+          console.log("booking: ", booking);
+          if (!booking) {
+            await db.Booking.findOrCreate({
+              where: { patientId: user[0].id, statusId: { [Op.not]: "S3" } },
+              defaults: {
+                statusId: "S1",
+                doctorId: data.doctorId,
+                patientId: user[0].id,
+                date: data.date,
+                timeType: data.timeType,
+                token: token,
+                phoneNumberPatient: data.phoneNumber,
+              },
+            });
+            await emailService.sendSimpleEmail({
+              reciverEmail: data.email,
+              patientName: data.fullName,
+              time: data.timeString,
+              doctorName: data.doctorName,
+              phoneNumber: data.phoneNumber,
+              language: data.language,
+              redirectLink: buildUrlEmail(data.doctorId, token),
+            });
+            resolve({
+              errCode: 0,
+              errMessage: "Save infor patient successfully",
+            });
+          } else {
+            resolve({
+              errCode: 2,
+              errMessage: "Appointment already exists",
+            });
+          }
         }
-        resolve({
-          errCode: 0,
-          errMessage: "Save infor patient successfully",
-        });
       }
     } catch (e) {
       reject(e);
@@ -104,7 +125,28 @@ let postVerifyBookAppointment = (data) => {
     }
   });
 };
+
+let getAllAppointments = () => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let data = await db.Booking.findAll({
+        where: {
+          [Op.or]: [{ statusId: "S1" }, { statusId: "S2" }],
+        },
+        attributes: ["date", "timeType"],
+      });
+      resolve({
+        errCode: 0,
+        message: "Ok",
+        data: data,
+      });
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
 module.exports = {
   postBookAppointment,
   postVerifyBookAppointment,
+  getAllAppointments,
 };

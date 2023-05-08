@@ -1,5 +1,6 @@
 import db from "../models/index";
 import CRUDService from "../services/CRUDService";
+import homeService from "../services/homeService";
 const getHomePage = async (req, res) => {
   try {
     // let data = await db.User.findAll();
@@ -65,6 +66,16 @@ const deleteCRUD = async (req, res) => {
   }
 };
 
+let postSearchHomePage = async (req, res) => {
+  try {
+    let result = await homeService.postSearchHomePage(req.body.keyword);
+    return res.status(200).json(result);
+  } catch (e) {
+    console.log(e);
+    return res.status(500).json(e);
+  }
+};
+
 module.exports = {
   getHomePage,
   getCRUD,
@@ -73,4 +84,5 @@ module.exports = {
   getEditCRUD,
   putCRUD,
   deleteCRUD,
+  postSearchHomePage,
 };

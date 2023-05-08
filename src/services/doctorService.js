@@ -24,6 +24,16 @@ let getTopDoctorHome = (limitInput) => {
             as: "genderData",
             attributes: ["valueEn", "valueVi"],
           },
+          {
+            model: db.Doctor_Infor,
+            attributes: ["specialtyId"],
+            include: [
+              {
+                model: db.Specialty,
+                attributes: ["name"],
+              },
+            ],
+          },
         ],
         raw: true,
         nest: true,
@@ -38,6 +48,7 @@ let getTopDoctorHome = (limitInput) => {
     }
   });
 };
+
 let getAllDoctors = () => {
   return new Promise(async (resolve, reject) => {
     try {
@@ -46,6 +57,49 @@ let getAllDoctors = () => {
         attributes: {
           exclude: ["password", "image"],
         },
+      });
+      resolve({
+        errCode: 0,
+        data: doctors,
+      });
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
+
+let getAllDoctorsIncludeImage = () => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let doctors = await db.User.findAll({
+        where: { roleId: "R2" },
+        attributes: {
+          exclude: ["password"],
+        },
+        include: [
+          {
+            model: db.Allcode,
+            as: "positionData",
+            attributes: ["valueEn", "valueVi"],
+          },
+          {
+            model: db.Allcode,
+            as: "genderData",
+            attributes: ["valueEn", "valueVi"],
+          },
+          {
+            model: db.Doctor_Infor,
+            attributes: ["specialtyId"],
+            include: [
+              {
+                model: db.Specialty,
+                attributes: ["name"],
+              },
+            ],
+          },
+        ],
+        raw: true,
+        nest: true,
       });
       resolve({
         errCode: 0,
@@ -114,6 +168,10 @@ let saveDetailInforDoctor = (inputData) => {
             doctorMarkdown.contentMarkdown = inputData.contentMarkdown;
             doctorMarkdown.description = inputData.description;
             doctorMarkdown.updatedAt = new Date();
+            // console.log(
+            //   "doctorMarkdown -----------------------------------------------: " +
+            //     doctorMarkdown
+            // );
             await doctorMarkdown.save();
           }
         }
@@ -140,6 +198,10 @@ let saveDetailInforDoctor = (inputData) => {
           doctorInfor.note = inputData.note;
           doctorInfor.specialtyId = inputData.specialtyId;
           doctorInfor.clinicId = inputData.clinicId;
+          // console.log(
+          //   "doctorInfor: ------------------------------------------------: ",
+          //   doctorInfor
+          // );
           await doctorInfor.save();
         } else {
           // Create
@@ -511,6 +573,39 @@ let sendRemedy = (data) => {
     }
   });
 };
+
+let cancelRemedy = (data) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      // || !data.imgBase64
+      if (!data.email || !data.patientId || !data.timeType) {
+        resolve({
+          errCode: 1,
+          errMessage: "Missing required parameter!",
+        });
+      } else {
+        // Update patient status
+        let appointment = await db.Booking.destroy({
+          where: {
+            doctorId: data.doctorId,
+            patientId: data.patientId,
+            timeType: data.timeType,
+            statusId: "S2",
+          },
+          force: true,
+        });
+        // Send email cancel
+        await emailService.cancelAttachment(data);
+        resolve({
+          errCode: 0,
+          message: "OK",
+        });
+      }
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
 module.exports = {
   getTopDoctorHome,
   getAllDoctors,
@@ -522,4 +617,6 @@ module.exports = {
   getProfileDoctorById,
   getListPatientForDoctor,
   sendRemedy,
+  getAllDoctorsIncludeImage,
+  cancelRemedy,
 };
