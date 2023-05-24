@@ -22,7 +22,8 @@ let postBookAppointment = (data) => {
         !data.fullName ||
         !data.selectedGender ||
         !data.address ||
-        !data.phoneNumber
+        !data.phoneNumber ||
+        !data.reason
       ) {
         resolve({
           errCode: 1,
@@ -52,7 +53,7 @@ let postBookAppointment = (data) => {
               [Op.or]: [{ statusId: "S1" }, { statusId: "S2" }],
             },
           });
-          console.log("booking: ", booking);
+
           if (!booking) {
             await db.Booking.findOrCreate({
               where: { patientId: user[0].id, statusId: { [Op.not]: "S3" } },
@@ -64,6 +65,7 @@ let postBookAppointment = (data) => {
                 timeType: data.timeType,
                 token: token,
                 phoneNumberPatient: data.phoneNumber,
+                reason: data.reason,
               },
             });
             await emailService.sendSimpleEmail({
@@ -73,6 +75,7 @@ let postBookAppointment = (data) => {
               doctorName: data.doctorName,
               phoneNumber: data.phoneNumber,
               language: data.language,
+              reason: data.reason,
               redirectLink: buildUrlEmail(data.doctorId, token),
             });
             resolve({
