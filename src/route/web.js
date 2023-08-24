@@ -21,6 +21,8 @@ let initWebRoutes = (app) => {
   router.post("/api/login", userController.handleLogin);
   router.get("/api/get-all-users", userController.handleGetAllUsers);
   router.post("/api/create-new-user", userController.handleCreateNewUser);
+  router.post("/api/import-users-csv", userController.handleImportUsersCSV);
+
   router.put("/api/edit-user", userController.handleEditUser);
   router.delete("/api/delete-user", userController.handleDeleteUser);
 
@@ -39,6 +41,8 @@ let initWebRoutes = (app) => {
     doctorController.getDetailDoctorById
   );
   router.post("/api/bulk-create-schedule", doctorController.bulkCreateSchedule);
+  router.put("/api/edit-schedule", doctorController.editSchedule);
+
   router.get("/api/get-schedule-by-date", doctorController.getScheduleByDate);
   router.get(
     "/api/get-extra-infor-doctor-by-id",
@@ -73,6 +77,8 @@ let initWebRoutes = (app) => {
   );
 
   router.post("/api/create-new-clinic", clinicController.createClinic);
+  router.put("/api/edit-clinic", clinicController.editClinic);
+  router.delete("/api/delete-clinic", clinicController.deleteClinic);
   router.get("/api/get-all-clinic", clinicController.getAllClinic);
   router.get(
     "/api/get-detail-clinic-by-id",

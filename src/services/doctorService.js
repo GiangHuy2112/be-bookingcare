@@ -3,6 +3,7 @@ import _ from "lodash";
 import emailService from "../services/emailService";
 require("dotenv").config();
 const MAX_NUMBER_SCHEDULE = process.env.MAX_NUMBER_SCHEDULE;
+const CURRENT_NUMBER = process.env.CURRENT_NUMBER;
 let getTopDoctorHome = (limitInput) => {
   return new Promise(async (resolve, reject) => {
     try {
@@ -307,6 +308,7 @@ let bulkCreateSchedule = (data) => {
         if (schedule && schedule.length > 0) {
           schedule = schedule.map((item) => {
             item.maxNumber = MAX_NUMBER_SCHEDULE;
+            item.currentNumber = CURRENT_NUMBER;
             return item;
           });
         }
@@ -314,7 +316,13 @@ let bulkCreateSchedule = (data) => {
         // Get all existing data
         let existing = await db.Schedule.findAll({
           where: { doctorId: data.doctorId, date: "" + data.formattedDate },
-          attributes: ["timeType", "date", "doctorId", "maxNumber"],
+          attributes: [
+            "timeType",
+            "date",
+            "doctorId",
+            "maxNumber",
+            "currentNumber",
+          ],
           raw: true,
         });
 
@@ -332,6 +340,34 @@ let bulkCreateSchedule = (data) => {
         resolve({
           errCode: 0,
           message: "OK",
+        });
+      }
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
+
+let editSchedule = (data) => {
+  console.log(data);
+  return new Promise(async (resolve, reject) => {
+    try {
+      let schedule = await db.Schedule.findOne({
+        where: { id: data.id },
+        raw: false,
+      });
+
+      if (schedule) {
+        schedule.currentNumber = data.currentNumber;
+        await schedule.save();
+        resolve({
+          errCode: 0,
+          message: "Schedule update successful",
+        });
+      } else {
+        resolve({
+          errCode: 1,
+          errMessage: "Schedule not found",
         });
       }
     } catch (e) {
@@ -619,4 +655,5 @@ module.exports = {
   sendRemedy,
   getAllDoctorsIncludeImage,
   cancelRemedy,
+  editSchedule,
 };

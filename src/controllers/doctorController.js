@@ -11,7 +11,7 @@ let getTopDoctorHome = async (req, res) => {
     console.log(e);
     return res.status(200).json({
       errCode: -1,
-      errMessage: "Error from server...",
+      errMessage: "Error from server...???",
     });
   }
 };
@@ -75,7 +75,13 @@ let bulkCreateSchedule = async (req, res) => {
     });
   }
 };
-
+let editSchedule = async (req, res) => {
+  let data = req.body;
+  let message = await doctorService.editSchedule(data);
+  return res.status(200).json({
+    message,
+  });
+};
 let getScheduleByDate = async (req, res) => {
   try {
     let infor = await doctorService.getScheduleByDate(
@@ -170,4 +176,5 @@ module.exports = {
   sendRemedy,
   getAllDoctorsIncludeImage,
   cancelRemedy,
+  editSchedule,
 };

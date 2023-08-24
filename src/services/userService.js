@@ -67,6 +67,7 @@ let checkUserEmail = (email) => {
         where: { email: email },
       });
       if (user) {
+        console.log("user:", user);
         resolve(true);
       } else {
         resolve(false);
@@ -127,6 +128,40 @@ let createNewUser = (data) => {
           positionId: data.positionId,
           image: data.avatar,
         });
+        resolve({
+          errCode: 0,
+          Message: "OK",
+        });
+      }
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
+
+let importUsersCSV = (data) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      // check email is exist ?
+      let check = false;
+      for (let i = 0; i < data.length; i++) {
+        check = await checkUserEmail(data[i].email);
+        if (check) {
+          check = data[i];
+          break;
+        }
+      }
+
+      if (check) {
+        resolve({
+          errCode: 1,
+          errMessage: `Your email: "${check.email}" is already, Please try another email`,
+        });
+      } else {
+        for (let i = 0; i < data.length; i++) {
+          data[i].password = await hashUserPassword(data[i].password);
+        }
+        await db.User.bulkCreate(data);
         resolve({
           errCode: 0,
           Message: "OK",
@@ -236,4 +271,5 @@ module.exports = {
   updateUserData,
   deleteUser,
   getAllCodeService,
+  importUsersCSV,
 };

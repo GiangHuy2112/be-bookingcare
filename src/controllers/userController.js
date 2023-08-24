@@ -45,6 +45,13 @@ let handleCreateNewUser = async (req, res) => {
   });
 };
 
+let handleImportUsersCSV = async (req, res) => {
+  let message = await userService.importUsersCSV(req.body);
+  return res.status(200).json({
+    message,
+  });
+};
+
 let handleEditUser = async (req, res) => {
   let data = req.body;
   let message = await userService.updateUserData(data);
@@ -84,4 +91,5 @@ module.exports = {
   handleEditUser,
   handleDeleteUser,
   getAllCode,
+  handleImportUsersCSV,
 };
