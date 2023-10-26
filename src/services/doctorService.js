@@ -1,6 +1,7 @@
 import db from "../models/index";
 import _ from "lodash";
 import emailService from "../services/emailService";
+import bcrypt from "bcrypt";
 require("dotenv").config();
 const MAX_NUMBER_SCHEDULE = process.env.MAX_NUMBER_SCHEDULE;
 const CURRENT_NUMBER = process.env.CURRENT_NUMBER;
@@ -331,8 +332,6 @@ let bulkCreateSchedule = (data) => {
           return a.timeType === b.timeType && +a.date === +b.date;
         });
 
-        console.log("toCreate: ", toCreate);
-
         // Create data
         if (toCreate && toCreate.length > 0) {
           await db.Schedule.bulkCreate(toCreate);
@@ -527,39 +526,73 @@ let getProfileDoctorById = (inputId) => {
   });
 };
 
-let getListPatientForDoctor = (doctorId, date) => {
+let getListMedicalBillForDoctor = (doctorId, date) => {
   return new Promise(async (resolve, reject) => {
     try {
-      if (!doctorId || !date) {
+      if (!doctorId) {
         resolve({
           errCode: 1,
           errMessage: "Missing required parameter!",
         });
       } else {
-        let data = await db.Booking.findAll({
-          where: { doctorId: doctorId, date: date, statusId: "S2" },
-          include: [
-            {
-              model: db.User,
-              as: "patientData",
-              attributes: ["email", "firstName", "address", "gender"],
-              include: [
-                {
-                  model: db.Allcode,
-                  as: "genderData",
-                  attributes: ["valueEn", "valueVi"],
-                },
-              ],
-            },
-            {
-              model: db.Allcode,
-              as: "timeTypeDataPatient",
-              attributes: ["valueEn", "valueVi"],
-            },
-          ],
-          raw: false,
-          nest: true,
-        });
+        let data;
+        if (date !== "NaN") {
+          data = await db.Booking.findAll({
+            where: { doctorId: doctorId, date: date },
+            include: [
+              {
+                model: db.User,
+                as: "patientData",
+                attributes: [
+                  "email",
+                  "firstName",
+                  "address",
+                  "gender",
+                  "citizenIdentification",
+                ],
+                include: [
+                  {
+                    model: db.Allcode,
+                    as: "genderData",
+                    attributes: ["valueEn", "valueVi"],
+                  },
+                ],
+              },
+              {
+                model: db.Allcode,
+                as: "timeTypeDataPatient",
+                attributes: ["valueEn", "valueVi"],
+              },
+            ],
+            raw: false,
+            nest: true,
+          });
+        } else {
+          data = await db.Booking.findAll({
+            where: { doctorId: doctorId },
+            include: [
+              {
+                model: db.User,
+                as: "patientData",
+                attributes: ["email", "firstName", "address", "gender"],
+                include: [
+                  {
+                    model: db.Allcode,
+                    as: "genderData",
+                    attributes: ["valueEn", "valueVi"],
+                  },
+                ],
+              },
+              {
+                model: db.Allcode,
+                as: "timeTypeDataPatient",
+                attributes: ["valueEn", "valueVi"],
+              },
+            ],
+            raw: false,
+            nest: true,
+          });
+        }
         if (!data) {
           data = [];
         }
@@ -577,7 +610,7 @@ let sendRemedy = (data) => {
   return new Promise(async (resolve, reject) => {
     try {
       // || !data.imgBase64
-      if (!data.email || !data.patientId || !data.timeType) {
+      if (!data.email || !data.patientId || !data.timeType || !data.conclude) {
         resolve({
           errCode: 1,
           errMessage: "Missing required parameter!",
@@ -595,6 +628,7 @@ let sendRemedy = (data) => {
         });
         if (appointment) {
           appointment.statusId = "S3";
+          appointment.conclude = data.conclude;
           await appointment.save();
         }
         // Send email remedy
@@ -642,6 +676,174 @@ let cancelRemedy = (data) => {
     }
   });
 };
+
+let getAllAccountants = (doctorId) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (!doctorId) {
+        resolve({
+          errCode: 1,
+          errMessage: "Missing required parameter!",
+        });
+      } else {
+        let data = await db.Accountant.findAll({
+          where: { doctorId: doctorId },
+          attributes: {
+            exclude: ["password"],
+          },
+          include: [
+            {
+              model: db.Allcode,
+              as: "genderAccountantData",
+              attributes: ["valueEn", "valueVi"],
+            },
+          ],
+          raw: false,
+          nest: true,
+        });
+        if (!data) {
+          data = [];
+        }
+        resolve({
+          errCode: 0,
+          data: data,
+        });
+      }
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
+let checkUserEmail = (email) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let accountant = await db.Accountant.findOne({
+        where: { email: email },
+      });
+      if (accountant) {
+        resolve(true);
+      } else {
+        resolve(false);
+      }
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
+let saltRounds = 10;
+let hashUserPassword = (password) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let hashPassWord = await bcrypt.hashSync(password, saltRounds);
+      resolve(hashPassWord);
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
+let handleCreateNewAccountant = (data) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      // check email is exist ?
+      let check = await checkUserEmail(data.email);
+      if (check) {
+        resolve({
+          errCode: 1,
+          errMessage: "Your email is already, Please try another email",
+        });
+      } else {
+        let hashPasswordFromBcrypt = await hashUserPassword(data.password);
+        let accountant = await db.Accountant.create({
+          email: data.email,
+          password: hashPasswordFromBcrypt,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          address: data.address,
+          phoneNumber: data.phoneNumber,
+          gender: data.gender,
+          roleId: data.roleId,
+          positionId: data.positionId,
+          image: data.avatar,
+          doctorId: data.doctorId,
+        });
+        resolve({
+          errCode: 0,
+          Message: "OK",
+        });
+      }
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
+
+let updateAccountantData = (data) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (!data.id || !data.roleId || !data.positionId || !data.gender) {
+        resolve({
+          errCode: 2,
+          errMessage: "Missing required parameters",
+        });
+      }
+      let accountant = await db.Accountant.findOne({
+        where: { id: data.id },
+        raw: false,
+      });
+
+      if (accountant) {
+        accountant.firstName = data.firstName;
+        accountant.lastName = data.lastName;
+        accountant.address = data.address;
+        accountant.phoneNumber = data.phoneNumber;
+        accountant.gender = data.gender;
+        accountant.roleId = data.roleId;
+        accountant.positionId = data.positionId;
+        if (data.avatar) {
+          accountant.image = data.avatar;
+        }
+        await accountant.save();
+        resolve({
+          errCode: 0,
+          message: "Accountant update successful",
+        });
+      } else {
+        resolve({
+          errCode: 1,
+          errMessage: "Accountant not found",
+        });
+      }
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
+let deleteAccountant = (accountantId) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let accountant = await db.Accountant.findOne({
+        where: { id: accountantId },
+      });
+      if (accountant) {
+        await db.Accountant.destroy({
+          where: { id: accountantId },
+        });
+        resolve({
+          errCode: 0,
+          message: "Accountant has been deleted",
+        });
+      } else {
+        resolve({
+          errCode: 2,
+          errMessage: "Accountant does not exist",
+        });
+      }
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
+
 module.exports = {
   getTopDoctorHome,
   getAllDoctors,
@@ -651,9 +853,13 @@ module.exports = {
   getScheduleByDate,
   getExtraInforDoctorById,
   getProfileDoctorById,
-  getListPatientForDoctor,
+  getListMedicalBillForDoctor,
   sendRemedy,
   getAllDoctorsIncludeImage,
   cancelRemedy,
   editSchedule,
+  getAllAccountants,
+  handleCreateNewAccountant,
+  updateAccountantData,
+  deleteAccountant,
 };

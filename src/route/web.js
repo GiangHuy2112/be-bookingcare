@@ -5,6 +5,8 @@ import doctorController from "../controllers/doctorController";
 import patientController from "../controllers/patientController";
 import specialtyController from "../controllers/specialtyController";
 import clinicController from "../controllers/clinicController";
+import middlewareController from "../controllers/middlewareController";
+
 const router = express.Router();
 
 let initWebRoutes = (app) => {
@@ -14,16 +16,28 @@ let initWebRoutes = (app) => {
   router.get("/get-crud", homeController.displayGetCRUD);
   router.get("/edit-crud", homeController.getEditCRUD);
   router.post("/put-crud", homeController.putCRUD);
-  router.get("/delete-crud", homeController.deleteCRUD);
+  router.get(
+    "/delete-crud",
+    // middlewareController.verifyTokenAndAdminAndDoctor,
+    homeController.deleteCRUD
+  );
 
   router.post("/api/search-home-page", homeController.postSearchHomePage);
 
   router.post("/api/login", userController.handleLogin);
-  router.get("/api/get-all-users", userController.handleGetAllUsers);
+  router.post("/api/logout", userController.handleLogout);
+  // router.get("/api/get-all-users", userController.handleGetAllUsers);
+  router.get(
+    "/api/get-all-users",
+    middlewareController.verifyToken,
+    userController.handleGetAllUsers
+  );
   router.post("/api/create-new-user", userController.handleCreateNewUser);
+
   router.post("/api/import-users-csv", userController.handleImportUsersCSV);
 
   router.put("/api/edit-user", userController.handleEditUser);
+
   router.delete("/api/delete-user", userController.handleDeleteUser);
 
   router.get("/api/allcode", userController.getAllCode);
@@ -53,8 +67,8 @@ let initWebRoutes = (app) => {
     doctorController.getProfileDoctorById
   );
   router.get(
-    "/api/get-list-patient-for-doctor",
-    doctorController.getListPatientForDoctor
+    "/api/get-list-medical-bill-for-doctor",
+    doctorController.getListMedicalBillForDoctor
   );
   router.post("/api/send-remedy", doctorController.sendRemedy);
   router.post("/api/cancel-remedy", doctorController.cancelRemedy);
@@ -64,6 +78,10 @@ let initWebRoutes = (app) => {
     "/api/patient-book-appointment",
     patientController.postBookAppointment
   );
+
+  router.post("/api/patient", patientController.postPatient);
+  router.put("/api/edit-patient", patientController.putPatient);
+
   router.post(
     "/api/verify-book-appointment",
     patientController.postVerifyBookAppointment
@@ -85,6 +103,19 @@ let initWebRoutes = (app) => {
     clinicController.getDetailClinicById
   );
 
+  router.post("/refresh", userController.requestRefreshToken);
+
+  router.get("/api/get-all-accountants", doctorController.getAllAccountants);
+
+  router.post(
+    "/api/create-new-accountant",
+    doctorController.handleCreateNewAccountant
+  );
+  router.put("/api/edit-accountant", doctorController.handleEditAccountant);
+  router.delete(
+    "/api/delete-accountant",
+    doctorController.handleDeleteAccountant
+  );
   return app.use("/", router);
 };
 

@@ -31,6 +31,8 @@ module.exports = (sequelize, DataTypes) => {
       token: DataTypes.STRING,
       phoneNumberPatient: DataTypes.STRING,
       reason: DataTypes.STRING,
+      costs: DataTypes.STRING,
+      conclude: DataTypes.STRING,
     },
     {
       sequelize,

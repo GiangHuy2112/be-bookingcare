@@ -26,6 +26,9 @@ module.exports = {
       date: {
         type: Sequelize.STRING,
       },
+      costs: {
+        type: Sequelize.STRING,
+      },
       timeType: {
         type: Sequelize.STRING,
       },

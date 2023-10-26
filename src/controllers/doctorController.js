@@ -122,9 +122,9 @@ let getProfileDoctorById = async (req, res) => {
     });
   }
 };
-let getListPatientForDoctor = async (req, res) => {
+let getListMedicalBillForDoctor = async (req, res) => {
   try {
-    let infor = await doctorService.getListPatientForDoctor(
+    let infor = await doctorService.getListMedicalBillForDoctor(
       req.query.doctorId,
       req.query.date
     );
@@ -163,6 +163,45 @@ let cancelRemedy = async (req, res) => {
   }
 };
 
+let getAllAccountants = async (req, res) => {
+  try {
+    console.log("controller: ", req.query.doctorId);
+    let infor = await doctorService.getAllAccountants(req.query.doctorId);
+    return res.status(200).json(infor);
+  } catch (e) {
+    console.log(e);
+    return res.status(200).json({
+      errCode: -1,
+      errMessage: "Error from server...",
+    });
+  }
+};
+
+let handleCreateNewAccountant = async (req, res) => {
+  let message = await doctorService.handleCreateNewAccountant(req.body);
+  return res.status(200).json({
+    message,
+  });
+};
+let handleEditAccountant = async (req, res) => {
+  let data = req.body;
+  let message = await doctorService.updateAccountantData(data);
+  return res.status(200).json({
+    message,
+  });
+};
+let handleDeleteAccountant = async (req, res) => {
+  if (!req.body.id) {
+    return res.status(200).json({
+      errCode: 1,
+      errMessage: "Missing required parameters!",
+    });
+  }
+  let message = await doctorService.deleteAccountant(req.body.id);
+  return res.status(200).json({
+    message,
+  });
+};
 module.exports = {
   getTopDoctorHome,
   getAllDoctors,
@@ -172,9 +211,13 @@ module.exports = {
   getScheduleByDate,
   getExtraInforDoctorById,
   getProfileDoctorById,
-  getListPatientForDoctor,
+  getListMedicalBillForDoctor,
   sendRemedy,
   getAllDoctorsIncludeImage,
   cancelRemedy,
   editSchedule,
+  getAllAccountants,
+  handleCreateNewAccountant,
+  handleEditAccountant,
+  handleDeleteAccountant,
 };

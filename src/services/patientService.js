@@ -23,7 +23,8 @@ let postBookAppointment = (data) => {
         !data.selectedGender ||
         !data.address ||
         !data.phoneNumber ||
-        !data.reason
+        !data.reason ||
+        !data.citizenIdentification
       ) {
         resolve({
           errCode: 1,
@@ -32,13 +33,21 @@ let postBookAppointment = (data) => {
       } else {
         // Update patient
         let user = await db.User.findOrCreate({
-          where: { email: data.email },
+          where: { email: data.email, doctorId: data.doctorId },
           defaults: {
             email: data.email,
             roleId: "R3",
             address: data.address,
             gender: data.selectedGender,
             firstName: data.fullName,
+            doctorId: data.doctorId,
+            examinationTime: data.timeType,
+            statusBooking: "S1",
+            citizenIdentification: data.citizenIdentification,
+            examinationDate: data.date,
+            reason: data.reason,
+            phoneNumber: data.phoneNumber,
+            birthday: data.birthday,
           },
         });
 
@@ -59,13 +68,14 @@ let postBookAppointment = (data) => {
               where: { patientId: user[0].id, statusId: { [Op.not]: "S3" } },
               defaults: {
                 statusId: "S1",
-                doctorId: data.doctorId,
+                doctorId: data?.doctorId,
                 patientId: user[0].id,
-                date: data.date,
-                timeType: data.timeType,
+                date: data?.date,
+                timeType: data?.timeType,
                 token: token,
-                phoneNumberPatient: data.phoneNumber,
-                reason: data.reason,
+                phoneNumberPatient: data?.phoneNumber,
+                reason: data?.reason,
+                costs: data?.costs,
               },
             });
             await emailService.sendSimpleEmail({
@@ -89,6 +99,118 @@ let postBookAppointment = (data) => {
             });
           }
         }
+      }
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
+
+let postPatient = (data) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (
+        !data.email ||
+        !data.doctorId ||
+        !data.fullName ||
+        !data.selectedGender ||
+        !data.address ||
+        !data.phoneNumber ||
+        !data.reason ||
+        !data.citizenIdentification
+      ) {
+        resolve({
+          errCode: 1,
+          errMessage: "Missing required parameter",
+        });
+      } else {
+        // Update patient
+        let user = await db.User.findOrCreate({
+          where: { email: data.email, doctorId: data.doctorId },
+          defaults: {
+            email: data.email,
+            roleId: "R3",
+            address: data.address,
+            gender: data.selectedGender,
+            firstName: data.fullName,
+            doctorId: data.doctorId,
+            examinationTime: data.timeType,
+            statusBooking: "S3",
+            citizenIdentification: data.citizenIdentification,
+            examinationDate: data.examinationDate,
+            reason: data.reason,
+            phoneNumber: data.phoneNumber,
+            birthday: data.birthday,
+          },
+        });
+
+        // Create a booking record
+        console.log("check user: ", user[0]);
+
+        if (user && user[0]) {
+          resolve({
+            errCode: 0,
+            errMessage: "Save infor patient successfully",
+          });
+        }
+      }
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
+
+let putPatient = (data) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (
+        !data.id ||
+        !data.email ||
+        !data.doctorId ||
+        !data.fullName ||
+        !data.selectedGender ||
+        !data.address ||
+        !data.phoneNumber ||
+        !data.reason ||
+        !data.citizenIdentification
+      ) {
+        resolve({
+          errCode: 2,
+          errMessage: "Missing required parameters",
+        });
+      }
+      let patient = await db.User.findOne({
+        where: { id: data.id },
+        raw: false,
+      });
+
+      if (patient) {
+        patient.email = data.email;
+        patient.roleId = "R3";
+        patient.address = data.address;
+        patient.gender = data.selectedGender;
+        patient.firstName = data.fullName;
+        patient.doctorId = data.doctorId;
+        patient.examinationTime = data.timeType;
+        patient.statusBooking = "S3";
+        patient.citizenIdentification = data.citizenIdentification;
+        patient.examinationDate = data.examinationDate;
+        patient.reason = data.reason;
+        patient.phoneNumber = data.phoneNumber;
+        patient.birthday = data.birthday;
+        if (data.avatar) {
+          patient.image = data.avatar;
+        }
+        await patient.save();
+        resolve({
+          errCode: 0,
+          message: "Patient update successful",
+        });
+      } else {
+        resolve({
+          errCode: 1,
+          errMessage: "Patient not found",
+        });
       }
     } catch (e) {
       reject(e);
@@ -152,4 +274,6 @@ module.exports = {
   postBookAppointment,
   postVerifyBookAppointment,
   getAllAppointments,
+  postPatient,
+  putPatient,
 };

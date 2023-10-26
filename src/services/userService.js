@@ -1,7 +1,6 @@
 const db = require("../models");
 import bcrypt from "bcrypt";
 const saltRounds = 10;
-
 let hashUserPassword = (password) => {
   return new Promise(async (resolve, reject) => {
     try {
@@ -32,14 +31,31 @@ let handleUserLogin = (email, password) => {
           ],
           raw: true,
         });
+        let userAccountant = await db.Accountant.findOne({
+          where: { email: email },
+          attributes: [
+            "id",
+            "email",
+            "roleId",
+            "password",
+            "firstName",
+            "lastName",
+            "doctorId",
+          ],
+          raw: true,
+        });
         // Compare password
-        if (user) {
-          let check = await bcrypt.compareSync(password, user.password);
+        if (user || userAccountant) {
+          let check = await bcrypt.compareSync(
+            password,
+            user?.password || userAccountant?.password
+          );
           if (check) {
             userData.errCode = 0;
             userData.errMessage = "OK";
-            delete user.password;
-            userData.user = user;
+            delete user?.password;
+            delete userAccountant?.password;
+            userData.user = user || userAccountant;
           } else {
             userData.errCode = 3;
             userData.errMessage = "Wrong password!";
@@ -53,6 +69,7 @@ let handleUserLogin = (email, password) => {
         userData.errCode = 1;
         userData.errMessage = `Your's Email isn't exist in your system. Please try again`;
       }
+      console.log(userData);
       resolve(userData);
     } catch (e) {
       reject(e);
@@ -66,8 +83,10 @@ let checkUserEmail = (email) => {
       let user = await db.User.findOne({
         where: { email: email },
       });
-      if (user) {
-        console.log("user:", user);
+      let userAccountant = await db.Accountant.findOne({
+        where: { email: email },
+      });
+      if (user || userAccountant) {
         resolve(true);
       } else {
         resolve(false);
@@ -87,6 +106,15 @@ let getAllUsers = (userId) => {
           attributes: {
             exclude: ["password"],
           },
+          include: [
+            {
+              model: db.Allcode,
+              as: "timeTypePatient",
+              attributes: ["valueEn", "valueVi"],
+            },
+          ],
+          raw: false,
+          nest: true,
         });
       }
       if (userId && userId !== "ALL") {
@@ -203,7 +231,6 @@ let updateUserData = (data) => {
   return new Promise(async (resolve, reject) => {
     try {
       if (!data.id || !data.roleId || !data.positionId || !data.gender) {
-        console.log(data);
         resolve({
           errCode: 2,
           errMessage: "Missing required parameters",

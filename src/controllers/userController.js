@@ -1,4 +1,76 @@
 import userService from "../services/userService";
+const jwt = require("jsonwebtoken");
+let arrRefreshTokens = [];
+const generateAccessToken = (userData) => {
+  return jwt.sign(
+    {
+      id: userData?.id || userData?.user?.id,
+      roleId: userData?.roleId || userData?.user?.roleId,
+    },
+    process.env.JWT_ACCESS_KEY,
+    {
+      expiresIn: "1h",
+    }
+  );
+};
+
+const generateRefreshToken = (userData) => {
+  return jwt.sign(
+    {
+      id: userData?.id || userData.user.id,
+      roleId: userData?.roleId || userData.user.roleId,
+    },
+    process.env.JWT_REFRESH_KEY,
+    {
+      expiresIn: "365d",
+    }
+  );
+};
+
+const requestRefreshToken = async (req, res) => {
+  const refreshToken = req?.cookies?.refreshToken;
+  if (!refreshToken) {
+    return res.status(401).json("You're not authenticated");
+  }
+  if (!arrRefreshTokens.includes(refreshToken)) {
+    return res.status(403).json("Refresh token is not valid");
+  }
+  jwt.verify(refreshToken, process.env.JWT_REFRESH_KEY, (err, user) => {
+    if (err) {
+      console.log(err);
+    }
+    arrRefreshTokens = arrRefreshTokens.filter(
+      (token) => token !== refreshToken
+    );
+    let newAccessToken = null;
+    let newRefreshToken = null;
+    if (user) {
+      newAccessToken = generateAccessToken(user);
+      newRefreshToken = generateRefreshToken(user);
+
+      arrRefreshTokens.push(newRefreshToken);
+
+      res.cookie("refreshToken", newRefreshToken, {
+        httpOnly: true, // Chỉ cho phép truy cập thông qua HTTP và JavaScript không thể truy cập được
+        // secure: false, // Sử dụng HTTPS để truyền cookie
+        // sameSite: "none", // Giới hạn cookie chỉ được gửi trong cùng một nguồn gốc (same-site)
+        // path: "/",
+      });
+    }
+    res.status(200).json({ accessToken: newAccessToken });
+  });
+};
+
+let handleLogout = async (req, res) => {
+  res.clearCookie("refreshToken");
+  arrRefreshTokens = arrRefreshTokens.filter(
+    (token) => token !== req.cookies.refreshToken
+  );
+  res.status(200).json({
+    status: 200,
+    message: "Logged out!",
+  });
+};
 
 let handleLogin = async (req, res) => {
   let email = req.body.email;
@@ -12,6 +84,19 @@ let handleLogin = async (req, res) => {
   }
 
   let userData = await userService.handleUserLogin(email, password);
+  let refreshToken = "";
+  if (userData?.user?.id) {
+    const accessToken = generateAccessToken(userData);
+    refreshToken = generateRefreshToken(userData);
+    userData.user.accessToken = accessToken;
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true, // Chỉ cho phép truy cập thông qua HTTP và JavaScript không thể truy cập được
+      // secure: false, // Sử dụng HTTPS để truyền cookie
+      // sameSite: "none", // Giới hạn cookie chỉ được gửi trong cùng một nguồn gốc (same-site)
+      // path: "/",
+    });
+    arrRefreshTokens.push(refreshToken);
+  }
   return res.status(200).json({
     errCode: userData.errCode,
     message: userData.errMessage,
@@ -92,4 +177,6 @@ module.exports = {
   handleDeleteUser,
   getAllCode,
   handleImportUsersCSV,
+  requestRefreshToken,
+  handleLogout,
 };
