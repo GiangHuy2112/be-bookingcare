@@ -33,6 +33,7 @@ module.exports = (sequelize, DataTypes) => {
       reason: DataTypes.STRING,
       costs: DataTypes.STRING,
       conclude: DataTypes.STRING,
+      image: DataTypes.STRING,
     },
     {
       sequelize,

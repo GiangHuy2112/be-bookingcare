@@ -19,7 +19,10 @@ module.exports = (sequelize, DataTypes) => {
         as: "genderAccountantData",
       });
 
-      Accountant.hasOne(models.Markdown, { foreignKey: "doctorId" });
+      Accountant.belongsTo(models.User, {
+        foreignKey: "doctorId",
+        as: "doctorManagement",
+      });
     }
   }
   Accountant.init(

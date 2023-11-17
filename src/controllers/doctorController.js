@@ -126,7 +126,8 @@ let getListMedicalBillForDoctor = async (req, res) => {
   try {
     let infor = await doctorService.getListMedicalBillForDoctor(
       req.query.doctorId,
-      req.query.date
+      req.query.date,
+      req.query.type
     );
     return res.status(200).json(infor);
   } catch (e) {
@@ -202,6 +203,41 @@ let handleDeleteAccountant = async (req, res) => {
     message,
   });
 };
+let putBookAppointment = async (req, res) => {
+  let data = req.body;
+  let message = await doctorService.putBookAppointment(data);
+  return res.status(200).json({
+    message,
+  });
+};
+let handleDeleteBookAppointment = async (req, res) => {
+  if (!req.body.id) {
+    return res.status(200).json({
+      errCode: 1,
+      errMessage: "Missing required parameters!",
+    });
+  }
+  let message = await doctorService.deleteBooking(req.body.id);
+  return res.status(200).json({
+    message,
+  });
+};
+let handleConfirmExaminedAppointment = async (req, res) => {
+  console.log(req.body);
+  if (!req.body.data) {
+    return res.status(200).json({
+      errCode: 1,
+      errMessage: "Missing required parameters!",
+    });
+  }
+  let message = await doctorService.confirmExaminedAppointment(
+    req.body.data?.id?.bookingId
+  );
+  return res.status(200).json({
+    message,
+  });
+};
+
 module.exports = {
   getTopDoctorHome,
   getAllDoctors,
@@ -220,4 +256,7 @@ module.exports = {
   handleCreateNewAccountant,
   handleEditAccountant,
   handleDeleteAccountant,
+  handleDeleteBookAppointment,
+  putBookAppointment,
+  handleConfirmExaminedAppointment,
 };

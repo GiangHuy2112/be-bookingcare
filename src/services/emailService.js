@@ -70,7 +70,7 @@ let getBodyHTMLEmailRemedy = (dataSend) => {
   if (dataSend.language === "vi") {
     result = `
     <h3>Xin chào ${dataSend.patientName}</h3>
-    <p>Bạn nhận được email này vì đã đặt lịch khám bệnh online trên <b>BookingCare</b> thành công</p>
+    <p>Bạn nhận được email này vì đã khám bệnh online trên <b>BookingCare</b> thành công</p>
     <p>Thông tin đơn thuốc/hóa đơn được gửi trong <b>file đính kèm</b>.</p>
     <p>Mật khẩu để giải nén tệp đính kèm có dạng sau: <span style="font-style: oblique">họvàtênviếtthườngliềnkhôngdấu-3chữsốđầutiêncủasốđiệnthoại</span></p>
     <p>Ví dụ: Họ tên đầy đủ: Lê Văn Xyz, số điện thoại đăng ký khám bệnh: 0123456 thì mật khẩu giải nén là: levanxyz-012</p>

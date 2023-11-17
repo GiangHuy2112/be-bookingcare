@@ -105,8 +105,7 @@ let handleLogin = async (req, res) => {
 };
 
 let handleGetAllUsers = async (req, res) => {
-  let id = req.query.id; // All, id
-
+  let id = req?.query?.id; // All, id
   if (!id) {
     return res.status(200).json({
       errCode: 1,
@@ -169,6 +168,31 @@ let getAllCode = async (req, res) => {
     });
   }
 };
+let getDetailUserById = async (req, res) => {
+  try {
+    let infor = await userService.getDetailUserById(req.query.id);
+    return res.status(200).json(infor);
+  } catch (e) {
+    console.log(e);
+    return res.status(200).json({
+      errCode: -1,
+      errMessage: "Error from server...",
+    });
+  }
+};
+let getDetailAccountantById = async (req, res) => {
+  try {
+    let infor = await userService.getDetailAccountantById(req.query.id);
+    return res.status(200).json(infor);
+  } catch (e) {
+    console.log(e);
+    return res.status(200).json({
+      errCode: -1,
+      errMessage: "Error from server...",
+    });
+  }
+};
+
 module.exports = {
   handleLogin,
   handleGetAllUsers,
@@ -179,4 +203,6 @@ module.exports = {
   handleImportUsersCSV,
   requestRefreshToken,
   handleLogout,
+  getDetailUserById,
+  getDetailAccountantById,
 };

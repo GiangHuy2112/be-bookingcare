@@ -125,6 +125,7 @@ let getAllUsers = (userId) => {
           },
         });
       }
+      users.password = users.password;
       resolve(users);
     } catch (e) {
       reject(e);
@@ -236,10 +237,20 @@ let updateUserData = (data) => {
           errMessage: "Missing required parameters",
         });
       }
-      let user = await db.User.findOne({
-        where: { id: data.id },
-        raw: false,
-      });
+
+      let user = null;
+      console.log("-------------------------------:", data?.typeUser);
+      if (data?.typeUser !== "R4") {
+        user = await db.User.findOne({
+          where: { id: data.id },
+          raw: false,
+        });
+      } else {
+        user = await db.Accountant.findOne({
+          where: { id: data.id },
+          raw: false,
+        });
+      }
 
       if (user) {
         user.firstName = data.firstName;
@@ -249,9 +260,24 @@ let updateUserData = (data) => {
         user.gender = data.gender;
         user.roleId = data.roleId;
         user.positionId = data.positionId;
+        if (data?.password && data?.oldPassword) {
+          let check = await bcrypt.compareSync(
+            data?.oldPassword,
+            user?.password
+          );
+          if (check) {
+            user.password = await hashUserPassword(data?.password);
+          } else {
+            resolve({
+              errCode: 2,
+              message: "Mật khẩu cũ không chính xác",
+            });
+          }
+        }
         if (data.avatar) {
           user.image = data.avatar;
         }
+
         await user.save();
         resolve({
           errCode: 0,
@@ -291,6 +317,92 @@ let getAllCodeService = (typeInput) => {
     }
   });
 };
+let getDetailUserById = (inputId) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (!inputId) {
+        resolve({
+          errCode: 1,
+          errMessage: "Missing required parameter",
+        });
+      } else {
+        let data = await db.User.findOne({
+          where: { id: inputId },
+          attributes: [
+            "id",
+            "email",
+            "password",
+            "firstName",
+            "lastName",
+            "phoneNumber",
+            "address",
+            "image",
+          ],
+          raw: false,
+          nest: true,
+        });
+        if (data && data.image) {
+          data.image = Buffer.from(data.image, "base64").toString("binary");
+        }
+        if (!data) data = {};
+        resolve({
+          errCode: 0,
+          data: data,
+        });
+      }
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
+
+let getDetailAccountantById = (inputId) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (!inputId) {
+        resolve({
+          errCode: 1,
+          errMessage: "Missing required parameter",
+        });
+      } else {
+        let data = await db.Accountant.findOne({
+          where: { id: inputId },
+          attributes: [
+            "id",
+            "email",
+            "password",
+            "firstName",
+            "lastName",
+            "phoneNumber",
+            "address",
+            "image",
+            "gender",
+            "roleId",
+          ],
+          include: [
+            {
+              model: db.User,
+              as: "doctorManagement",
+              attributes: ["firstName", "lastName", "positionId"],
+            },
+          ],
+          raw: false,
+          nest: true,
+        });
+        if (data && data.image) {
+          data.image = Buffer.from(data.image, "base64").toString("binary");
+        }
+        if (!data) data = {};
+        resolve({
+          errCode: 0,
+          data: data,
+        });
+      }
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
 module.exports = {
   handleUserLogin,
   getAllUsers,
@@ -299,4 +411,6 @@ module.exports = {
   deleteUser,
   getAllCodeService,
   importUsersCSV,
+  getDetailUserById,
+  getDetailAccountantById,
 };

@@ -5,6 +5,7 @@ import bcrypt from "bcrypt";
 require("dotenv").config();
 const MAX_NUMBER_SCHEDULE = process.env.MAX_NUMBER_SCHEDULE;
 const CURRENT_NUMBER = process.env.CURRENT_NUMBER;
+const { Op } = require("sequelize");
 let getTopDoctorHome = (limitInput) => {
   return new Promise(async (resolve, reject) => {
     try {
@@ -526,7 +527,7 @@ let getProfileDoctorById = (inputId) => {
   });
 };
 
-let getListMedicalBillForDoctor = (doctorId, date) => {
+let getListMedicalBillForDoctor = (doctorId, date, type) => {
   return new Promise(async (resolve, reject) => {
     try {
       if (!doctorId) {
@@ -538,7 +539,22 @@ let getListMedicalBillForDoctor = (doctorId, date) => {
         let data;
         if (date !== "NaN") {
           data = await db.Booking.findAll({
-            where: { doctorId: doctorId, date: date },
+            where:
+              type === "LK"
+                ? {
+                    doctorId: doctorId,
+                    date: date,
+                    [Op.or]: [
+                      { statusId: "S1" },
+                      { statusId: "S2" },
+                      { statusId: "S4" },
+                    ],
+                  }
+                : {
+                    doctorId: doctorId,
+                    date: date,
+                    [Op.or]: [{ statusId: "S3" }, { statusId: "S5" }],
+                  },
             include: [
               {
                 model: db.User,
@@ -569,7 +585,20 @@ let getListMedicalBillForDoctor = (doctorId, date) => {
           });
         } else {
           data = await db.Booking.findAll({
-            where: { doctorId: doctorId },
+            where:
+              type === "LK"
+                ? {
+                    doctorId: doctorId,
+                    [Op.or]: [
+                      { statusId: "S1" },
+                      { statusId: "S2" },
+                      { statusId: "S4" },
+                    ],
+                  }
+                : {
+                    doctorId: doctorId,
+                    [Op.or]: [{ statusId: "S3" }, { statusId: "S5" }],
+                  },
             include: [
               {
                 model: db.User,
@@ -610,7 +639,13 @@ let sendRemedy = (data) => {
   return new Promise(async (resolve, reject) => {
     try {
       // || !data.imgBase64
-      if (!data.email || !data.patientId || !data.timeType || !data.conclude) {
+      if (
+        !data.email ||
+        !data.patientId ||
+        !data.timeType ||
+        !data.conclude ||
+        !data.imgBase64
+      ) {
         resolve({
           errCode: 1,
           errMessage: "Missing required parameter!",
@@ -622,13 +657,14 @@ let sendRemedy = (data) => {
             doctorId: data.doctorId,
             patientId: data.patientId,
             timeType: data.timeType,
-            statusId: "S2",
+            statusId: "S3",
           },
           raw: false,
         });
         if (appointment) {
-          appointment.statusId = "S3";
-          appointment.conclude = data.conclude;
+          appointment.statusId = "S5";
+          appointment.conclude = data?.conclude;
+          appointment.image = data?.imgBase64;
           await appointment.save();
         }
         // Send email remedy
@@ -655,15 +691,21 @@ let cancelRemedy = (data) => {
         });
       } else {
         // Update patient status
-        let appointment = await db.Booking.destroy({
+        let appointment = await db.Booking.findOne({
           where: {
             doctorId: data.doctorId,
             patientId: data.patientId,
             timeType: data.timeType,
-            statusId: "S2",
+            [Op.or]: [{ statusId: "S1" }, { statusId: "S2" }],
           },
           force: true,
+          raw: false,
         });
+        if (appointment) {
+          appointment.statusId = "S4";
+          appointment.conclude = data?.cancelReason;
+          await appointment.save();
+        }
         // Send email cancel
         await emailService.cancelAttachment(data);
         resolve({
@@ -843,7 +885,102 @@ let deleteAccountant = (accountantId) => {
     }
   });
 };
+let putBookAppointment = (data) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (!data.id) {
+        resolve({
+          errCode: 2,
+          errMessage: "Missing required parameters",
+        });
+      }
+      let booking = await db.Booking.findOne({
+        where: { id: data.id },
+        raw: false,
+      });
 
+      if (booking) {
+        booking.phoneNumberPatient = data?.phoneNumberPatient;
+        booking.reason = data?.reason;
+        booking.costs = data?.costs;
+        booking.timeType = data?.timeType;
+        booking.date = data?.date;
+        console.log("--------------------------", data);
+        await booking.save();
+        resolve({
+          errCode: 0,
+          message: "Booking update successful",
+        });
+      } else {
+        resolve({
+          errCode: 1,
+          errMessage: "Booking not found",
+        });
+      }
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
+let deleteBooking = (bookingId) => {
+  console.log(bookingId);
+  return new Promise(async (resolve, reject) => {
+    try {
+      let booking = await db.Booking.findOne({
+        where: { id: bookingId.bookingId },
+      });
+      if (booking) {
+        await db.Booking.destroy({
+          where: { id: bookingId.bookingId },
+        });
+        resolve({
+          errCode: 0,
+          message: "Booking has been deleted",
+        });
+      } else {
+        resolve({
+          errCode: 2,
+          errMessage: "Booking does not exist",
+        });
+      }
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
+let confirmExaminedAppointment = (bookingId) => {
+  console.log(bookingId);
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (!bookingId) {
+        resolve({
+          errCode: 2,
+          errMessage: "Missing required parameters",
+        });
+      }
+      let booking = await db.Booking.findOne({
+        where: { id: bookingId, statusId: "S2" },
+        raw: false,
+      });
+
+      if (booking) {
+        booking.statusId = "S3";
+        await booking.save();
+        resolve({
+          errCode: 0,
+          message: "Booking update successful",
+        });
+      } else {
+        resolve({
+          errCode: 1,
+          errMessage: "Booking not found",
+        });
+      }
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
 module.exports = {
   getTopDoctorHome,
   getAllDoctors,
@@ -862,4 +999,7 @@ module.exports = {
   handleCreateNewAccountant,
   updateAccountantData,
   deleteAccountant,
+  deleteBooking,
+  putBookAppointment,
+  confirmExaminedAppointment,
 };
