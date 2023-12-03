@@ -12,12 +12,12 @@ let postSearchHomePage = (keyword) => {
           [Op.or]: [
             {
               firstName: {
-                [Op.like]: `%${keyword}%`,
+                [Op.iLike]: `%${keyword}%`, // Sử dụng Op.iLike thay vì Op.like để thực hiện tìm kiếm không phân biệt chữ hoa và chữ thường
               },
             },
             {
               lastName: {
-                [Op.like]: `%${keyword}%`,
+                [Op.iLike]: `%${keyword}%`, // Sử dụng Op.iLike thay vì Op.like để thực hiện tìm kiếm không phân biệt chữ hoa và chữ thường
               },
             },
           ],
@@ -28,7 +28,7 @@ let postSearchHomePage = (keyword) => {
       let specializations = await db.Specialty.findAll({
         where: {
           name: {
-            [Op.like]: `%${keyword}%`,
+            [Op.iLike]: `%${keyword}%`, // Sử dụng Op.iLike thay vì Op.like để thực hiện tìm kiếm không phân biệt chữ hoa và chữ thường
           },
         },
         attributes: ["id", "name"],
@@ -37,7 +37,7 @@ let postSearchHomePage = (keyword) => {
       let clinics = await db.Clinic.findAll({
         where: {
           name: {
-            [Op.like]: `%${keyword}%`,
+            [Op.iLike]: `%${keyword}%`, // Sử dụng Op.iLike thay vì Op.like để thực hiện tìm kiếm không phân biệt chữ hoa và chữ thường
           },
         },
         attributes: ["id", "name"],

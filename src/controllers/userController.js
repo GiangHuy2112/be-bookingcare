@@ -9,7 +9,7 @@ const generateAccessToken = (userData) => {
     },
     process.env.JWT_ACCESS_KEY,
     {
-      expiresIn: "1h",
+      expiresIn: "24h",
     }
   );
 };

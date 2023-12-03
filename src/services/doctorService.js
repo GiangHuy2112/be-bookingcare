@@ -334,9 +334,14 @@ let bulkCreateSchedule = (data) => {
         });
 
         // Create data
-        if (toCreate && toCreate.length > 0) {
-          await db.Schedule.bulkCreate(toCreate);
-        }
+        // if (toCreate && toCreate.length > 0) {
+        // await db.Schedule.bulkCreate(toCreate);
+        // }
+        await db.Schedule.destroy({
+          where: { doctorId: data.doctorId, date: "" + data.formattedDate },
+        });
+
+        await db.Schedule.bulkCreate(schedule);
         resolve({
           errCode: 0,
           message: "OK",
@@ -603,7 +608,13 @@ let getListMedicalBillForDoctor = (doctorId, date, type) => {
               {
                 model: db.User,
                 as: "patientData",
-                attributes: ["email", "firstName", "address", "gender"],
+                attributes: [
+                  "email",
+                  "firstName",
+                  "address",
+                  "gender",
+                  "citizenIdentification",
+                ],
                 include: [
                   {
                     model: db.Allcode,
@@ -661,11 +672,23 @@ let sendRemedy = (data) => {
           },
           raw: false,
         });
-        if (appointment) {
+        let user = await db.User.findOne({
+          where: {
+            doctorId: data.doctorId,
+            id: data.patientId,
+            examinationTime: data.timeType,
+            statusBooking: "S1",
+          },
+          raw: false,
+        });
+        if (appointment && user) {
           appointment.statusId = "S5";
           appointment.conclude = data?.conclude;
           appointment.image = data?.imgBase64;
           await appointment.save();
+
+          user.statusBooking = "S3";
+          await user.save();
         }
         // Send email remedy
         await emailService.sendAttachment(data);
