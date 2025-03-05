@@ -69,7 +69,6 @@ let handleUserLogin = (email, password) => {
         userData.errCode = 1;
         userData.errMessage = `Email hoặc mật khẩu không chính xác`;
       }
-      console.log(userData);
       resolve(userData);
     } catch (e) {
       reject(e);
@@ -80,12 +79,16 @@ let handleUserLogin = (email, password) => {
 let checkUserEmail = (email) => {
   return new Promise(async (resolve, reject) => {
     try {
+
       let user = await db.User.findOne({
         where: { email: email },
       });
+
+
       let userAccountant = await db.Accountant.findOne({
         where: { email: email },
       });
+
       if (user || userAccountant) {
         resolve(true);
       } else {
@@ -145,6 +148,7 @@ let createNewUser = (data) => {
         });
       } else {
         let hashPasswordFromBcrypt = await hashUserPassword(data.password);
+
         await db.User.create({
           email: data.email,
           password: hashPasswordFromBcrypt,
@@ -157,6 +161,8 @@ let createNewUser = (data) => {
           positionId: data.positionId,
           image: data.avatar,
         });
+        console.log("hashPasswordFromBcrypt: ", hashPasswordFromBcrypt)
+
         resolve({
           errCode: 0,
           Message: "OK",
@@ -239,7 +245,6 @@ let updateUserData = (data) => {
       }
 
       let user = null;
-      console.log("-------------------------------:", data?.typeUser);
       if (data?.typeUser !== "R4") {
         user = await db.User.findOne({
           where: { id: data.id },
