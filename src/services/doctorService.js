@@ -676,7 +676,6 @@ let sendRemedy = (data) => {
           where: {
             doctorId: data.doctorId,
             id: data.patientId,
-            examinationTime: data.timeType,
             statusBooking: "S1",
           },
           raw: false,
@@ -689,13 +688,13 @@ let sendRemedy = (data) => {
 
           user.statusBooking = "S3";
           await user.save();
+          // Send email remedy
+          await emailService.sendAttachment(data);
+          resolve({
+            errCode: 0,
+            message: "OK",
+          });
         }
-        // Send email remedy
-        await emailService.sendAttachment(data);
-        resolve({
-          errCode: 0,
-          message: "OK",
-        });
       }
     } catch (e) {
       reject(e);
@@ -922,14 +921,26 @@ let putBookAppointment = (data) => {
         raw: false,
       });
 
-      if (booking) {
+      let user = await db.User.findOne({
+        where: {
+          id: data?.patientId,
+          doctorId: data?.doctorId,
+          statusBooking: "S1",
+        },
+        raw: false,
+      });
+      if (booking && user) {
         booking.phoneNumberPatient = data?.phoneNumberPatient;
         booking.reason = data?.reason;
         booking.costs = data?.costs;
         booking.timeType = data?.timeType;
         booking.date = data?.date;
-        console.log("--------------------------", data);
+        user.examinationTime = data?.timeType;
+        user.examinationDate = data?.date;
+        user.phoneNumber = data?.phoneNumberPatient;
+
         await booking.save();
+        await user.save();
         resolve({
           errCode: 0,
           message: "Booking update successful",

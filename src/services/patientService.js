@@ -31,45 +31,63 @@ let postBookAppointment = (data) => {
           errMessage: "Missing required parameter",
         });
       } else {
-        // Update patient
-        let user = await db.User.findOrCreate({
-          where: { email: data.email, doctorId: data.doctorId },
-          defaults: {
-            email: data.email,
-            roleId: "R3",
-            address: data.address,
-            gender: data.selectedGender,
-            firstName: data.fullName,
-            doctorId: data.doctorId,
-            examinationTime: data.timeType,
-            statusBooking: "S1",
-            citizenIdentification: data.citizenIdentification,
-            examinationDate: data.date,
-            reason: data.reason,
-            phoneNumber: data.phoneNumber,
-            birthday: data.birthday,
-          },
+        let user = await db.User.create({
+          email: data.email,
+          roleId: "R3",
+          address: data.address,
+          gender: data.selectedGender,
+          firstName: data.fullName,
+          doctorId: data.doctorId,
+          examinationTime: data.timeType,
+          statusBooking: "S1",
+          citizenIdentification: data.citizenIdentification,
+          examinationDate: data.date,
+          reason: data.reason,
+          phoneNumber: data.phoneNumber,
+          birthday: data.birthday,
         });
+        // Update patient
+        // let user = await db.User.findOrCreate({
+        //   where: { email: data.email, doctorId: data.doctorId },
+        //   defaults: {
+        //     email: data.email,
+        //     roleId: "R3",
+        //     address: data.address,
+        //     gender: data.selectedGender,
+        //     firstName: data.fullName,
+        //     doctorId: data.doctorId,
+        //     examinationTime: data.timeType,
+        //     statusBooking: "S1",
+        //     citizenIdentification: data.citizenIdentification,
+        //     examinationDate: data.date,
+        //     reason: data.reason,
+        //     phoneNumber: data.phoneNumber,
+        //     birthday: data.birthday,
+        //   },
+        // });
 
         // Create a booking record
-        console.log("check user: ", user[0]);
+        console.log("check user: ", user);
 
-        if (user && user[0]) {
+        if (user && user?.dataValues) {
           let token = uuidv4();
           let booking = await db.Booking.findOne({
             where: {
-              patientId: user[0].id,
+              patientId: user?.dataValues.id,
               [Op.or]: [{ statusId: "S1" }, { statusId: "S2" }],
             },
           });
 
           if (!booking) {
             await db.Booking.findOrCreate({
-              where: { patientId: user[0].id, statusId: { [Op.not]: "S3" } },
+              where: {
+                patientId: user?.dataValues.id,
+                statusId: { [Op.not]: "S3" },
+              },
               defaults: {
                 statusId: "S1",
                 doctorId: data?.doctorId,
-                patientId: user[0].id,
+                patientId: user?.dataValues.id,
                 date: data?.date,
                 timeType: data?.timeType,
                 token: token,
@@ -145,9 +163,8 @@ let postPatient = (data) => {
         });
 
         // Create a booking record
-        console.log("check user: ", user[0]);
 
-        if (user && user[0]) {
+        if (user && user?.dataValues) {
           resolve({
             errCode: 0,
             errMessage: "Save infor patient successfully",

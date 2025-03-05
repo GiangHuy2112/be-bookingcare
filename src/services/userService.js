@@ -58,7 +58,7 @@ let handleUserLogin = (email, password) => {
             userData.user = user || userAccountant;
           } else {
             userData.errCode = 3;
-            userData.errMessage = "Wrong password!";
+            userData.errMessage = "Email hoặc mật khẩu không chính xác";
           }
         } else {
           userData.errCode = 2;
@@ -67,7 +67,7 @@ let handleUserLogin = (email, password) => {
       } else {
         // Return error
         userData.errCode = 1;
-        userData.errMessage = `Your's Email isn't exist in your system. Please try again`;
+        userData.errMessage = `Email hoặc mật khẩu không chính xác`;
       }
       console.log(userData);
       resolve(userData);
