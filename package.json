@@ -12,6 +12,9 @@
     "nodejs",
     "express"
   ],
+  "engines": {
+    "node": ">=16 || 14 >=14.17"
+  },
   "author": "Giang Huy",
   "license": "ISC",
   "dependencies": {
